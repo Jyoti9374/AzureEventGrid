@@ -5,6 +5,8 @@
 package com.azure.ai.openai.implementation;
 
 import com.azure.ai.openai.OpenAIServiceVersion;
+import com.azure.ai.openai.models.AudioTranscriptionOptions;
+import com.azure.ai.openai.models.AudioTranslationOptions;
 import com.azure.core.annotation.BodyParam;
 import com.azure.core.annotation.ExpectedResponses;
 import com.azure.core.annotation.HeaderParam;
@@ -31,6 +33,8 @@ import com.azure.core.http.rest.RestProxy;
 import com.azure.core.util.BinaryData;
 import com.azure.core.util.Context;
 import com.azure.core.util.FluxUtil;
+import com.azure.core.util.MultipartFormData;
+import com.azure.core.util.MultipartFormDataBuilder;
 import com.azure.core.util.serializer.JacksonAdapter;
 import com.azure.core.util.serializer.SerializerAdapter;
 import reactor.core.publisher.Mono;
@@ -1788,5 +1792,72 @@ public final class OpenAIClientImpl {
         final String accept = "application/json";
         return service.getEmbeddingsSync(this.getEndpoint(), this.getServiceVersion().getVersion(),
             deploymentOrModelName, accept, embeddingsOptions, requestOptions, Context.NONE);
+    }
+
+
+
+
+    public static BinaryData getAudioTranslationRequestBody(AudioTranslationOptions audioTranslationOptions,
+                                                            RequestOptions requestOptions) {
+        MultipartFormDataBuilder formDataContentBuilder = new MultipartFormDataBuilder();
+        if (audioTranslationOptions.getFile() != null) {
+            formDataContentBuilder.appendFile("file",
+                    BinaryData.fromBytes(audioTranslationOptions.getFile()),
+                    null,
+                    audioTranslationOptions.getFilename());
+        }
+        if (audioTranslationOptions.getResponseFormat() != null) {
+            formDataContentBuilder.appendText("response_format", audioTranslationOptions.getResponseFormat().toString());
+        }
+        if (audioTranslationOptions.getModel() != null) {
+            formDataContentBuilder.appendText("model", audioTranslationOptions.getModel());
+        }
+        if (audioTranslationOptions.getPrompt() != null) {
+            formDataContentBuilder.appendText("prompt", audioTranslationOptions.getPrompt());
+        }
+        if (audioTranslationOptions.getTemperature() != null) {
+            formDataContentBuilder.appendText("temperature", String.valueOf(audioTranslationOptions.getTemperature()));
+        }
+        MultipartFormData formData = formDataContentBuilder.build();
+        String contentType = formData.getContentType();
+
+        requestOptions.setHeader("Content-Length", Long.valueOf(formData.getContentLength()).toString());
+        requestOptions.setHeader("Content-Type", contentType);
+
+        return BinaryData.fromStream(formData.getRequestBody());
+    }
+
+
+    public static BinaryData getAudioTranscriptionRequestBody(AudioTranscriptionOptions audioTranscriptionOptions,
+                                                              RequestOptions requestOptions) {
+        MultipartFormDataBuilder formDataContentBuilder = new MultipartFormDataBuilder();
+        if (audioTranscriptionOptions.getFile() != null) {
+            formDataContentBuilder.appendFile("file",
+                    BinaryData.fromBytes(audioTranscriptionOptions.getFile()),
+                    null,
+                    audioTranscriptionOptions.getFilename());
+        }
+        if (audioTranscriptionOptions.getResponseFormat() != null) {
+            formDataContentBuilder.appendText("response_format", audioTranscriptionOptions.getResponseFormat().toString());
+        }
+        if (audioTranscriptionOptions.getModel() != null) {
+            formDataContentBuilder.appendText("model", audioTranscriptionOptions.getModel());
+        }
+        if (audioTranscriptionOptions.getPrompt() != null) {
+            formDataContentBuilder.appendText("prompt", audioTranscriptionOptions.getPrompt());
+        }
+        if (audioTranscriptionOptions.getTemperature() != null) {
+            formDataContentBuilder.appendText("temperature", String.valueOf(audioTranscriptionOptions.getTemperature()));
+        }
+        if (audioTranscriptionOptions.getLanguage() != null) {
+            formDataContentBuilder.appendText("language", audioTranscriptionOptions.getLanguage());
+        }
+
+        MultipartFormData formData = formDataContentBuilder.build();
+        String contentType = formData.getContentType();
+        requestOptions.setHeader("Content-Length", Long.valueOf(formData.getContentLength()).toString());
+        requestOptions.setHeader("Content-Type", contentType);
+
+        return BinaryData.fromStream(formData.getRequestBody());
     }
 }
