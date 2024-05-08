@@ -23,36 +23,31 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 public class HttpPipelinePolicyTests {
     @Test
     public void verifySend() throws IOException {
-        SyncPolicy policy1 = new SyncPolicy();
-        SyncPolicy policy2 = new SyncPolicy();
         URL url = createUrl("http://localhost/");
 
         HttpPipeline pipeline = new HttpPipelineBuilder()
             .httpClient(new NoOpHttpClient())
-            .policies(policy1, policy2)
+            .policies(new SyncPolicy(), new SyncPolicy())
             .build();
 
-
         pipeline.send(new HttpRequest(HttpMethod.GET, url)).close();
-
-        assertEquals(1, policy1.syncCalls.get());
-        assertEquals(1, policy2.syncCalls.get());
+        pipeline.getPolicies()
+            .forEach(policy -> assertEquals(1, ((SyncPolicy) policy).syncCalls.get()));
     }
 
     @Test
     public void defaultImplementationShouldCallRightStack() throws IOException {
-        DefaultImplementationSyncPolicy policyWithDefaultSyncImplementation = new DefaultImplementationSyncPolicy();
         URL url = createUrl("http://localhost/");
 
         HttpPipeline pipeline = new HttpPipelineBuilder()
             .httpClient(new NoOpHttpClient())
-            .policies(policyWithDefaultSyncImplementation)
+            .policies(new DefaultImplementationSyncPolicy())
             .build();
 
         pipeline.send(new HttpRequest(HttpMethod.GET, url)).close();
 
-        assertEquals(1, policyWithDefaultSyncImplementation.syncCalls.get());
-        assertEquals(1, policyWithDefaultSyncImplementation.syncCalls.get());
+        pipeline.getPolicies()
+            .forEach(policy -> assertEquals(1, ((DefaultImplementationSyncPolicy) policy).syncCalls.get()));
     }
 
     /**
@@ -63,25 +58,8 @@ public class HttpPipelinePolicyTests {
     @Test
     public void doesNotThrowThatThreadIsNonBlocking() throws IOException {
         SyncPolicy policy1 = new SyncPolicy();
-        HttpPipelinePolicy badPolicy1 = (httpRequest, next) -> {
-            try {
-                Thread.sleep(10);
-            } catch (InterruptedException e) {
-                throw new RuntimeException(e);
-            }
-
-            return next.process();
-        };
-
-        HttpPipelinePolicy badPolicy2 = (httpRequest, next) -> {
-            try {
-                Thread.sleep(10);
-            } catch (InterruptedException e) {
-                throw new RuntimeException(e);
-            }
-
-            return next.process();
-        };
+        HttpPipelinePolicy badPolicy1 = new BadPolicy();
+        HttpPipelinePolicy badPolicy2 = new BadPolicy();
 
         HttpClient badClient = (request) -> {
             try {
@@ -89,8 +67,10 @@ public class HttpPipelinePolicyTests {
             } catch (InterruptedException e) {
                 throw new RuntimeException(e);
             }
+
             return new HttpResponse<>(request, 200, new HttpHeaders(), null);
         };
+
         URL url = createUrl("http://localhost/");
 
         HttpPipeline pipeline = new HttpPipelineBuilder()
@@ -101,26 +81,54 @@ public class HttpPipelinePolicyTests {
         pipeline.send(new HttpRequest(HttpMethod.GET, url)).close();
     }
 
+    private static class BadPolicy extends HttpPipelinePolicy {
+        @Override
+        public Response<?> process(HttpRequest httpRequest, HttpPipeline httpPipeline) {
+            try {
+                Thread.sleep(10);
+            } catch (InterruptedException e) {
+                throw new RuntimeException(e);
+            }
 
-    private static class SyncPolicy implements HttpPipelinePolicy {
-        final AtomicInteger syncCalls = new AtomicInteger();
+            return super.process(httpRequest, httpPipeline);
+        }
 
         @Override
-        public Response<?> process(HttpRequest httpRequest, HttpPipelineNextPolicy next) {
-            syncCalls.incrementAndGet();
-
-            return next.process();
+        public HttpPipelinePolicy clone() {
+            return new BadPolicy();
         }
     }
 
-    private static class DefaultImplementationSyncPolicy implements HttpPipelinePolicy {
+
+    private static class SyncPolicy extends HttpPipelinePolicy {
         final AtomicInteger syncCalls = new AtomicInteger();
 
         @Override
-        public Response<?> process(HttpRequest httpRequest, HttpPipelineNextPolicy next) {
+        public Response<?> process(HttpRequest httpRequest, HttpPipeline httpPipeline) {
             syncCalls.incrementAndGet();
 
-            return next.process();
+            return super.process(httpRequest, httpPipeline);
+        }
+
+        @Override
+        public HttpPipelinePolicy clone() {
+            return new SyncPolicy();
+        }
+    }
+
+    private static class DefaultImplementationSyncPolicy extends HttpPipelinePolicy {
+        final AtomicInteger syncCalls = new AtomicInteger();
+
+        @Override
+        public Response<?> process(HttpRequest httpRequest, HttpPipeline httpPipeline) {
+            syncCalls.incrementAndGet();
+
+            return super.process(httpRequest, httpPipeline);
+        }
+
+        @Override
+        public HttpPipelinePolicy clone() {
+            return new DefaultImplementationSyncPolicy();
         }
     }
 }

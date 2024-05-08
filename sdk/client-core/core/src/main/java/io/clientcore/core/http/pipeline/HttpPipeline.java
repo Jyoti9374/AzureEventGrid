@@ -6,8 +6,9 @@ package io.clientcore.core.http.pipeline;
 import io.clientcore.core.http.client.HttpClient;
 import io.clientcore.core.http.models.HttpRequest;
 import io.clientcore.core.http.models.Response;
-import io.clientcore.core.implementation.http.HttpPipelineCallState;
 
+import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
@@ -38,7 +39,19 @@ public final class HttpPipeline {
         Objects.requireNonNull(pipelinePolicies, "'pipelinePolicies' cannot be null.");
 
         this.httpClient = httpClient;
-        this.pipelinePolicies = Collections.unmodifiableList(pipelinePolicies);
+
+        HttpPipelinePolicy[] clonedPolicies = new HttpPipelinePolicy[pipelinePolicies.size()];
+
+        // Set each policy's next policy.
+        for (int i = pipelinePolicies.size() - 1; i >= 0; i--) {
+            clonedPolicies[i] = pipelinePolicies.get(i).clone();
+
+            if (i < pipelinePolicies.size() - 1) {
+                clonedPolicies[i].setNextPolicy(clonedPolicies[i + 1]);
+            }
+        }
+
+        this.pipelinePolicies = Collections.unmodifiableList(Arrays.asList(clonedPolicies));
     }
 
     /**
@@ -67,8 +80,19 @@ public final class HttpPipeline {
      * @return An {@link Response}.
      */
     public Response<?> send(HttpRequest request) {
-        HttpPipelineNextPolicy next = new HttpPipelineNextPolicy(new HttpPipelineCallState(this, request));
+        HttpPipelinePolicy basePolicy = new BasePolicy();
 
-        return next.process();
+        if (!getPolicies().isEmpty()) {
+            basePolicy.setNextPolicy(this.getPolicies().get(0));
+        }
+
+        return basePolicy.process(request, this);
+    }
+
+    private static class BasePolicy extends HttpPipelinePolicy {
+        @Override
+        public HttpPipelinePolicy clone() {
+            return new BasePolicy();
+        }
     }
 }
