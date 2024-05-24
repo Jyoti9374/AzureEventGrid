@@ -10,7 +10,6 @@ import com.azure.communication.callautomation.implementation.models.ContinuousDt
 import com.azure.communication.callautomation.implementation.models.DtmfOptionsInternal;
 import com.azure.communication.callautomation.implementation.models.DtmfToneInternal;
 import com.azure.communication.callautomation.implementation.models.FileSourceInternal;
-import com.azure.communication.callautomation.implementation.models.HoldRequest;
 import com.azure.communication.callautomation.implementation.models.PlayOptionsInternal;
 import com.azure.communication.callautomation.implementation.models.PlayRequest;
 import com.azure.communication.callautomation.implementation.models.PlaySourceInternal;
@@ -22,13 +21,7 @@ import com.azure.communication.callautomation.implementation.models.RecognizeReq
 import com.azure.communication.callautomation.implementation.models.SendDtmfTonesRequestInternal;
 import com.azure.communication.callautomation.implementation.models.SpeechOptionsInternal;
 import com.azure.communication.callautomation.implementation.models.SsmlSourceInternal;
-import com.azure.communication.callautomation.implementation.models.StartHoldMusicRequestInternal;
-import com.azure.communication.callautomation.implementation.models.StartTranscriptionRequestInternal;
-import com.azure.communication.callautomation.implementation.models.StopHoldMusicRequestInternal;
-import com.azure.communication.callautomation.implementation.models.StopTranscriptionRequestInternal;
 import com.azure.communication.callautomation.implementation.models.TextSourceInternal;
-import com.azure.communication.callautomation.implementation.models.UnholdRequest;
-import com.azure.communication.callautomation.implementation.models.UpdateTranscriptionRequestInternal;
 import com.azure.communication.callautomation.implementation.models.VoiceKindInternal;
 import com.azure.communication.callautomation.models.CallMediaRecognizeChoiceOptions;
 import com.azure.communication.callautomation.models.CallMediaRecognizeDtmfOptions;
@@ -38,7 +31,6 @@ import com.azure.communication.callautomation.models.CallMediaRecognizeSpeechOrD
 import com.azure.communication.callautomation.models.ContinuousDtmfRecognitionOptions;
 import com.azure.communication.callautomation.models.DtmfTone;
 import com.azure.communication.callautomation.models.FileSource;
-import com.azure.communication.callautomation.models.HoldOptions;
 import com.azure.communication.callautomation.models.PlayOptions;
 import com.azure.communication.callautomation.models.PlaySource;
 import com.azure.communication.callautomation.models.PlayToAllOptions;
@@ -46,9 +38,6 @@ import com.azure.communication.callautomation.models.RecognitionChoice;
 import com.azure.communication.callautomation.models.SendDtmfTonesOptions;
 import com.azure.communication.callautomation.models.SendDtmfTonesResult;
 import com.azure.communication.callautomation.models.SsmlSource;
-import com.azure.communication.callautomation.models.StartHoldMusicOptions;
-import com.azure.communication.callautomation.models.StartTranscriptionOptions;
-import com.azure.communication.callautomation.models.StopTranscriptionOptions;
 import com.azure.communication.callautomation.models.TextSource;
 import com.azure.communication.common.CommunicationIdentifier;
 import com.azure.core.annotation.ReturnType;
@@ -62,10 +51,8 @@ import com.azure.core.util.logging.ClientLogger;
 import reactor.core.publisher.Mono;
 
 import java.time.Duration;
-import java.time.OffsetDateTime;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.UUID;
 import java.util.stream.Collectors;
 
 import static com.azure.core.util.FluxUtil.monoError;
@@ -258,7 +245,6 @@ public final class CallMediaAsync {
         try {
             PlayToAllOptions playOptions = new PlayToAllOptions(options.getPlaySources());
             playOptions.setLoop(options.isLoop());
-            playOptions.setInterruptCallMediaOperation(options.isInterruptCallMediaOperation());
             playOptions.setOperationContext(options.getOperationContext());
             playOptions.setOperationCallbackUrl(options.getOperationCallbackUrl());
 
@@ -331,8 +317,7 @@ public final class CallMediaAsync {
             PlayRequest request = new PlayRequest()
                 .setPlaySources(playSourcesInternal);
 
-            request.setPlayOptions(new PlayOptionsInternal().setLoop(options.isLoop())
-                                                            .setInterruptCallMediaOperation(options.isInterruptCallMediaOperation()));
+            request.setPlayOptions(new PlayOptionsInternal().setLoop(options.isLoop()));
             request.setOperationContext(options.getOperationContext());
             request.setOperationCallbackUri(options.getOperationCallbackUrl());
 
@@ -623,8 +608,6 @@ public final class CallMediaAsync {
             return contentsInternal.sendDtmfTonesWithResponseAsync(
                 callConnectionId,
                 requestInternal,
-                UUID.randomUUID(),
-                OffsetDateTime.now(),
                 context
             ).map(response -> new SimpleResponse<>(response, SendDtmfTonesResponseConstructorProxy.create(response.getValue())));
         } catch (RuntimeException e) {
@@ -694,266 +677,4 @@ public final class CallMediaAsync {
             return monoError(logger, e);
         }
     }
-
-    /**
-     * Holds participant in call.
-     * @param targetParticipant the target.
-     * @param playSourceInfo audio to play.
-     * @return Response for successful operation.
-     */
-    @ServiceMethod(returns = ReturnType.SINGLE)
-    public Mono<Void> startHoldMusic(CommunicationIdentifier targetParticipant,
-                                     PlaySource playSourceInfo) {
-        return startHoldMusicWithResponseInternal(
-            new StartHoldMusicOptions(targetParticipant, playSourceInfo),
-            Context.NONE).then();
-    }
-
-    /**
-     * Holds participant in call.
-     * @param options - Different options to pass to the request.
-     * @return Response for successful operation.
-     */
-    @ServiceMethod(returns = ReturnType.SINGLE)
-    public Mono<Response<Void>> startHoldMusicWithResponse(StartHoldMusicOptions options) {
-        return withContext(context -> startHoldMusicWithResponseInternal(
-            options, context));
-    }
-
-    Mono<Response<Void>> startHoldMusicWithResponseInternal(StartHoldMusicOptions options, Context context) {
-        try {
-            context = context == null ? Context.NONE : context;
-
-            StartHoldMusicRequestInternal request = new StartHoldMusicRequestInternal()
-                .setTargetParticipant(CommunicationIdentifierConverter.convert(options.getTargetParticipant()))
-                .setPlaySourceInfo(convertPlaySourceToPlaySourceInternal(options.getPlaySourceInfo()))
-                .setOperationContext(options.getOperationContext());
-
-            return contentsInternal
-                .startHoldMusicWithResponseAsync(callConnectionId, request, context);
-        } catch (RuntimeException ex) {
-            return monoError(logger, ex);
-        }
-    }
-
-    /**
-     * Removes hold from participant in call.
-     * @param targetParticipant the target.
-     * @return Response for successful operation.
-     */
-    @ServiceMethod(returns = ReturnType.SINGLE)
-    public Mono<Void> stopHoldMusic(CommunicationIdentifier targetParticipant) {
-        return stopHoldMusicWithResponse(targetParticipant, null).then();
-    }
-
-    /**
-     * Holds participant in call.
-     * @param targetParticipant the target.
-     * @param operationContext Operational context.
-     * @return Response for successful operation.
-     */
-    @ServiceMethod(returns = ReturnType.SINGLE)
-    public Mono<Response<Void>> stopHoldMusicWithResponse(CommunicationIdentifier targetParticipant,
-                                                               String operationContext) {
-        return withContext(context -> stopHoldMusicWithResponseInternal(targetParticipant, operationContext, context));
-    }
-
-    Mono<Response<Void>> stopHoldMusicWithResponseInternal(CommunicationIdentifier targetParticipant,
-                                                            String operationContext,
-                                                            Context context) {
-        try {
-            context = context == null ? Context.NONE : context;
-            StopHoldMusicRequestInternal request = new StopHoldMusicRequestInternal()
-                .setTargetParticipant(CommunicationIdentifierConverter.convert(targetParticipant))
-                .setOperationContext(operationContext);
-
-            return contentsInternal
-                .stopHoldMusicWithResponseAsync(callConnectionId, request, context);
-        } catch (RuntimeException ex) {
-            return monoError(logger, ex);
-        }
-    }
-
-   /**
-     * Holds participant in call.
-     * @param targetParticipant the target.
-     * @return Response for successful operation.
-     */
-    @ServiceMethod(returns = ReturnType.SINGLE)
-    public Mono<Void> hold(CommunicationIdentifier targetParticipant) {
-        return holdInternal(targetParticipant, Context.NONE).then();
-    }
-
-    Mono<Response<Void>> holdInternal(CommunicationIdentifier targetParticipant, Context context) {
-        try {
-            context = context == null ? Context.NONE : context;
-            HoldRequest request = new HoldRequest()
-                .setTargetParticipant(CommunicationIdentifierConverter.convert(targetParticipant));
-
-            return contentsInternal
-                .holdWithResponseAsync(callConnectionId, request, context);
-        } catch (RuntimeException ex) {
-            return monoError(logger, ex);
-        }
-    }
-
-    /**
-     * Holds participant in call.
-     * @param options - Different options to pass to the request.
-     * @return Response for successful operation.
-     */
-    @ServiceMethod(returns = ReturnType.SINGLE)
-    public Mono<Response<Void>> holdWithResponse(HoldOptions options) {
-        return withContext(context -> holdWithResponseInternal(
-            options, context));
-    }
-
-    Mono<Response<Void>> holdWithResponseInternal(HoldOptions options, Context context) {
-        try {
-            context = context == null ? Context.NONE : context;
-            HoldRequest request = new HoldRequest()
-                .setTargetParticipant(CommunicationIdentifierConverter.convert(options.getTargetParticipant()))
-                .setPlaySourceInfo(convertPlaySourceToPlaySourceInternal(options.getPlaySourceInfo()))
-                .setOperationContext(options.getOperationContext());
-
-            return contentsInternal
-                .holdWithResponseAsync(callConnectionId, request, context);
-        } catch (RuntimeException ex) {
-            return monoError(logger, ex);
-        }
-    }
-
-    /**
-     * Removes hold from participant in call.
-     * @param targetParticipant the target.
-     * @return Response for successful operation.
-     */
-    @ServiceMethod(returns = ReturnType.SINGLE)
-    public Mono<Void> unhold(CommunicationIdentifier targetParticipant) {
-        return unholdWithResponse(targetParticipant, null).then();
-    }
-
-    /**
-     * Holds participant in call.
-     * @param targetParticipant the target.
-     * @param operationContext Operational context.
-     * @return Response for successful operation.
-     */
-    @ServiceMethod(returns = ReturnType.SINGLE)
-    public Mono<Response<Void>> unholdWithResponse(CommunicationIdentifier targetParticipant,
-                                                               String operationContext) {
-        return withContext(context -> unholdWithResponseInternal(targetParticipant, operationContext, context));
-    }
-
-    Mono<Response<Void>> unholdWithResponseInternal(CommunicationIdentifier targetParticipant,
-                                                            String operationContext,
-                                                            Context context) {
-        try {
-            context = context == null ? Context.NONE : context;
-            UnholdRequest request = new UnholdRequest()
-                .setTargetParticipant(CommunicationIdentifierConverter.convert(targetParticipant))
-                .setOperationContext(operationContext);
-
-            return contentsInternal
-                .unholdWithResponseAsync(callConnectionId, request, context);
-        } catch (RuntimeException ex) {
-            return monoError(logger, ex);
-        }
-    }
-
-    /**
-     * Starts transcription in the call.
-     *
-     * @return Response for successful operation.
-     */
-    @ServiceMethod(returns = ReturnType.SINGLE)
-    public Mono<Void> startTranscription() {
-        return startTranscriptionWithResponseAsync(null).then();
-    }
-
-    /**
-     * Starts transcription in the call with options.
-     *
-     * @param options Options for the Start Transcription operation.
-     * @return Response for successful operation.
-     */
-    @ServiceMethod(returns = ReturnType.SINGLE)
-    public Mono<Response<Void>> startTranscriptionWithResponseAsync(StartTranscriptionOptions options) {
-        return withContext(context -> startTranscriptionWithResponseInternal(options, context));
-    }
-
-    Mono<Response<Void>> startTranscriptionWithResponseInternal(StartTranscriptionOptions options, Context context) {
-        try {
-            context = context == null ? Context.NONE : context;
-            StartTranscriptionRequestInternal request = new StartTranscriptionRequestInternal();
-            if (options != null) {
-                request.setLocale(options.getLocale());
-                request.setOperationContext(options.getOperationContext());
-            }
-            return contentsInternal
-                .startTranscriptionWithResponseAsync(callConnectionId, request, context);
-        } catch (RuntimeException ex) {
-            return monoError(logger, ex);
-        }
-    }
-
-    /**
-     * Stops transcription in the call.
-     *
-     * @return Response for successful operation.
-     */
-    @ServiceMethod(returns = ReturnType.SINGLE)
-    public Mono<Void> stopTranscription() {
-        return stopTranscriptionWithResponseAsync(null).then();
-    }
-
-    /**
-     * Stops transcription in the call with options.
-     *
-     * @param options Options for the Stop Transcription operation.
-     * @return Response for successful operation.
-     */
-    @ServiceMethod(returns = ReturnType.SINGLE)
-    public Mono<Response<Void>> stopTranscriptionWithResponseAsync(StopTranscriptionOptions options) {
-        return withContext(context -> stopTranscriptionWithResponseInternal(options, context));
-    }
-
-    Mono<Response<Void>> stopTranscriptionWithResponseInternal(StopTranscriptionOptions options, Context context) {
-        try {
-            context = context == null ? Context.NONE : context;
-            StopTranscriptionRequestInternal request = new StopTranscriptionRequestInternal();
-            if (options != null) {
-                request.setOperationContext(options.getOperationContext());
-            }
-            return contentsInternal
-                .stopTranscriptionWithResponseAsync(callConnectionId, request, context);
-        } catch (RuntimeException ex) {
-            return monoError(logger, ex);
-        }
-    }
-
-    /**
-     * Updates transcription language
-     *
-     * @param locale Defines new locale for transcription.
-     * @return Response for successful operation.
-     */
-    @ServiceMethod(returns = ReturnType.SINGLE)
-    public Mono<Void> updateTranscription(String locale) {
-        return withContext(context -> updateTranscriptionWithResponseInternal(locale, context)).then();
-    }
-
-    Mono<Response<Void>> updateTranscriptionWithResponseInternal(String locale, Context context) {
-        try {
-            context = context == null ? Context.NONE : context;
-            UpdateTranscriptionRequestInternal request = new UpdateTranscriptionRequestInternal();
-            request.setLocale(locale);
-            return contentsInternal
-                .updateTranscriptionWithResponseAsync(callConnectionId, request, context);
-        } catch (RuntimeException ex) {
-            return monoError(logger, ex);
-        }
-    }
-
-
 }

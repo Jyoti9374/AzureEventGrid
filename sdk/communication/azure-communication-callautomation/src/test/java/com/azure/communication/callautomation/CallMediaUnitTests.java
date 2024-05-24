@@ -68,16 +68,6 @@ public class CallMediaUnitTests {
     }
 
     @Test
-    public void playFileToAllWithBargeInWithResponseTest() {
-        playToAllOptions = new PlayToAllOptions(playFileSource)
-            .setLoop(false)
-            .setInterruptCallMediaOperation(true)
-            .setOperationContext("operationContext");
-        Response<Void> response = callMedia.playToAllWithResponse(playToAllOptions, Context.NONE);
-        assertEquals(response.getStatusCode(), 202);
-    }
-
-    @Test
     public void playTextWithResponseTest() {
         playOptions = new PlayOptions(playTextSource, Collections.singletonList(new CommunicationUserIdentifier("id")))
             .setLoop(false)
@@ -90,16 +80,6 @@ public class CallMediaUnitTests {
     public void playTextToAllWithResponseTest() {
         playToAllOptions = new PlayToAllOptions(playTextSource)
             .setLoop(false)
-            .setOperationContext("operationContext");
-        Response<Void> response = callMedia.playToAllWithResponse(playToAllOptions, Context.NONE);
-        assertEquals(response.getStatusCode(), 202);
-    }
-
-    @Test
-    public void playTextToAllWithBargeInWithResponseTest() {
-        playToAllOptions = new PlayToAllOptions(playTextSource)
-            .setLoop(false)
-            .setInterruptCallMediaOperation(true)
             .setOperationContext("operationContext");
         Response<Void> response = callMedia.playToAllWithResponse(playToAllOptions, Context.NONE);
         assertEquals(response.getStatusCode(), 202);
@@ -184,95 +164,6 @@ public class CallMediaUnitTests {
         options.setOperationContext("ctx");
         options.setOperationCallbackUrl(CallAutomationUnitTestBase.CALL_OPERATION_CONTEXT);
         Response<SendDtmfTonesResult> response = callMedia.sendDtmfTonesWithResponse(options, Context.NONE);
-        assertEquals(response.getStatusCode(), 202);
-    }
-
-    @Test
-    public void startHoldMusicWithResponseTest() {
-        CallConnection callConnection =
-            CallAutomationUnitTestBase.getCallConnection(new ArrayList<>(
-                Collections.singletonList(new AbstractMap.SimpleEntry<>("", 200)))
-            );
-        callMedia = callConnection.getCallMedia();
-        StartHoldMusicOptions options = new StartHoldMusicOptions(
-            new CommunicationUserIdentifier("id"),
-            new TextSource().setText("audio to play"));
-        Response<Void> response = callMedia.startHoldMusicWithResponse(options, null);
-        assertEquals(response.getStatusCode(), 200);
-    }
-
-    @Test
-    public void stopHoldMusicWithResponseTest() {
-        CallConnection callConnection =
-            CallAutomationUnitTestBase.getCallConnection(new ArrayList<>(
-                Collections.singletonList(new AbstractMap.SimpleEntry<>("", 200)))
-            );
-        callMedia = callConnection.getCallMedia();
-
-        Response<Void> response = callMedia.stopHoldMusicWithResponse(new CommunicationUserIdentifier("id"),
-            "operationalContext", Context.NONE);
-        assertEquals(response.getStatusCode(), 200);
-    }
-
-    @Test
-    public void holdWithResponseTest() {
-        CallConnection callConnection =
-            CallAutomationUnitTestBase.getCallConnection(new ArrayList<>(
-                Collections.singletonList(new AbstractMap.SimpleEntry<>("", 200)))
-            );
-        callMedia = callConnection.getCallMedia();
-        HoldOptions options = new HoldOptions(new CommunicationUserIdentifier("id"))
-            .setPlaySourceInfo(new TextSource().setText("audio to play"));
-        Response<Void> response = callMedia.holdWithResponse(options, null);
-        assertEquals(response.getStatusCode(), 200);
-    }
-
-    @Test
-    public void holdWithResponseNoPromptTest() {
-        CallConnection callConnection =
-            CallAutomationUnitTestBase.getCallConnection(new ArrayList<>(
-                Collections.singletonList(new AbstractMap.SimpleEntry<>("", 200)))
-            );
-        callMedia = callConnection.getCallMedia();
-        HoldOptions options = new HoldOptions(
-            new CommunicationUserIdentifier("id"));
-        Response<Void> response = callMedia.holdWithResponse(options, null);
-        assertEquals(response.getStatusCode(), 200);
-    }
-
-    @Test
-    public void unholdWithResponseTest() {
-        CallConnection callConnection =
-            CallAutomationUnitTestBase.getCallConnection(new ArrayList<>(
-                Collections.singletonList(new AbstractMap.SimpleEntry<>("", 200)))
-            );
-        callMedia = callConnection.getCallMedia();
-
-        Response<Void> response = callMedia.unholdWithResponse(new CommunicationUserIdentifier("id"),
-            "operationalContext", Context.NONE);
-        assertEquals(response.getStatusCode(), 200);
-    }
-
-    @Test
-    public void startTranscriptionWithResponse() {
-        StartTranscriptionOptions options = new StartTranscriptionOptions();
-        options.setOperationContext("operationContext");
-        options.setLocale("en-US");
-        Response<Void> response = callMedia.startTranscriptionWithResponse(options, Context.NONE);
-        assertEquals(response.getStatusCode(), 202);
-    }
-
-    @Test
-    public void stopTranscriptionWithResponse() {
-        StopTranscriptionOptions options = new StopTranscriptionOptions();
-        options.setOperationContext("operationContext");
-        Response<Void> response = callMedia.stopTranscriptionWithResponse(options, Context.NONE);
-        assertEquals(response.getStatusCode(), 202);
-    }
-
-    @Test
-    public void updateTranscriptionWithResponse() {
-        Response<Void> response = callMedia.updateTranscriptionWithResponse("en-US", Context.NONE);
         assertEquals(response.getStatusCode(), 202);
     }
 }
