@@ -25,7 +25,7 @@ public final class MediaStreamingOptions {
      * Content type to stream, eg. audio, audio/video
      */
     @JsonProperty(value = "contentType")
-    private final MediaStreamingContent contentType;
+    private final MediaStreamingContentType contentType;
 
     /*
      * Audio channel type to stream, eg. unmixed audio, mixed audio
@@ -33,18 +33,26 @@ public final class MediaStreamingOptions {
     @JsonProperty(value = "audioChannelType")
     private final MediaStreamingAudioChannel audioChannelType;
 
+    /*
+     * The type of transport to be used for media streaming, eg. Websocket
+     */
+    @JsonProperty(value = "startMediaStreaming")
+    private final Boolean startMediaStreaming;
+
     /**
      * Creates a new instance of MediaStreamingConfiguration
      * @param transportUrl - The Transport URL
      * @param transportType - Transport type
      * @param contentType - Content Type
      * @param audioChannelType - Audio Channel Type
+     * @param startMediaStreaming - Start media streaming
      */
-    public MediaStreamingOptions(String transportUrl, MediaStreamingTransport transportType, MediaStreamingContent contentType, MediaStreamingAudioChannel audioChannelType) {
+    public MediaStreamingOptions(String transportUrl, MediaStreamingTransport transportType, MediaStreamingContentType contentType, MediaStreamingAudioChannel audioChannelType, Boolean startMediaStreaming) {
         this.transportUrl = transportUrl;
         this.transportType = transportType;
         this.contentType = contentType;
         this.audioChannelType = audioChannelType;
+        this.startMediaStreaming = startMediaStreaming;
     }
 
     /**
@@ -70,7 +78,7 @@ public final class MediaStreamingOptions {
      *
      * @return the contentType value.
      */
-    public MediaStreamingContent getContentType() {
+    public MediaStreamingContentType getContentType() {
         return this.contentType;
     }
 
@@ -81,5 +89,14 @@ public final class MediaStreamingOptions {
      */
     public MediaStreamingAudioChannel getAudioChannelType() {
         return this.audioChannelType;
+    }
+
+    /**
+     * Get the startMediaStreaming property: Which determines if the media streaming should be started immediately after call is answered or not.
+     *
+     * @return the startMediaStreaming value.
+     */
+    public boolean getStartMediaStreaming() {
+        return this.startMediaStreaming;
     }
 }

@@ -2,10 +2,12 @@
 // Licensed under the MIT License.
 
 package com.azure.communication.callautomation.models;
+import com.azure.core.annotation.Fluent;
 
 /**
  * Options for the Start Transcription operation.
  */
+@Fluent
 public class StartTranscriptionOptions {
 
     /**
@@ -17,6 +19,11 @@ public class StartTranscriptionOptions {
      * The value to identify context of the operation.
      */
     private String operationContext;
+
+    /*
+     * Endpoint where the custom model was deployed.
+     */
+    private String speechRecognitionModelEndpointId;
 
     /**
      * Get the locale.
@@ -55,6 +62,27 @@ public class StartTranscriptionOptions {
      */
     public StartTranscriptionOptions setOperationContext(String operationContext) {
         this.operationContext = operationContext;
+        return this;
+    }
+
+    /**
+     * Get the speechRecognitionModelEndpointId property: Endpoint where the custom model was deployed.
+     * 
+     * @return the speechRecognitionModelEndpointId value.
+     */
+    public String getSpeechRecognitionModelEndpointId() {
+        return this.speechRecognitionModelEndpointId;
+    }
+
+    /**
+     * Set the speechRecognitionModelEndpointId property: Endpoint where the custom model was deployed.
+     * 
+     * @param speechRecognitionModelEndpointId the speechRecognitionModelEndpointId value to set.
+     * @return the StartTranscriptionOptions object itself.
+     */
+    public StartTranscriptionOptions
+        setSpeechRecognitionModelEndpointId(String speechRecognitionModelEndpointId) {
+        this.speechRecognitionModelEndpointId = speechRecognitionModelEndpointId;
         return this;
     }
 }

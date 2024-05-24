@@ -8,6 +8,7 @@ import com.azure.core.annotation.Fluent;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
 import java.time.Duration;
+import java.util.List;
 
 /** Options to configure the Recognize operation **/
 @Fluent
@@ -23,6 +24,12 @@ public abstract class CallMediaRecognizeOptions {
      */
     @JsonProperty(value = "playPrompt")
     private PlaySource playPrompt;
+
+     /*
+     * The playPrompts property.
+     */
+    @JsonProperty(value = "playPrompts")
+    private List<PlaySource> playPrompts;
 
     /*
      * If set recognize can barge into other existing
@@ -55,12 +62,6 @@ public abstract class CallMediaRecognizeOptions {
      */
     @JsonProperty(value = "initialSilenceTimeout")
     private Duration initialSilenceTimeout;
-
-    /*
-     * Endpoint where the custom model was deployed.
-     */
-    @JsonProperty(value = "speechModelEndpointId")
-    private String speechModelEndpointId;
 
  /*
      * Target participant of DTMF tone recognition.
@@ -116,6 +117,15 @@ public abstract class CallMediaRecognizeOptions {
     }
 
     /**
+     * Get the playPrompts property: The list source of the audio to be played for recognition.
+     *
+     * @return the playPrompts value.
+     */
+    public List<PlaySource> getPlayPrompts() {
+        return this.playPrompts;
+    }
+
+    /**
      * Set the playPrompt property: The source of the audio to be played for recognition.
      *
      * @param playPrompt the playPrompt value to set.
@@ -123,6 +133,17 @@ public abstract class CallMediaRecognizeOptions {
      */
     public CallMediaRecognizeOptions setPlayPrompt(PlaySource playPrompt) {
         this.playPrompt = playPrompt;
+        return this;
+    }
+
+    /**
+     * Set the playPrompts property: The list source of the audio to be played for recognition.
+     *
+     * @param playPrompts the playPrompts value to set.
+     * @return the RecognizeRequest object itself.
+     */
+    public CallMediaRecognizeOptions setPlayPrompts(List<PlaySource> playPrompts) {
+        this.playPrompts = playPrompts;
         return this;
     }
 
@@ -260,24 +281,4 @@ public abstract class CallMediaRecognizeOptions {
         this.operationCallbackUrl = operationCallbackUrl;
         return this;
     }
-
-     /**
-     * Get the speech model endpoint id.
-     *
-     * @return the speech model endpoint id.
-     */
-    public String getSpeechModelEndpointId() {
-        return speechModelEndpointId;
-    }
-    /**
-     * Set the speechModelEndpointId property: Endpoint where the custom model was deployed.
-     *
-     * @param speechModelEndpointId the initialSilenceTimeout value to set.
-     * @return the CallMediaRecognizeSpeechOrDtmfOptions object itself.
-     */
-    public CallMediaRecognizeOptions setSpeechModelEndpointId(String speechModelEndpointId) {
-        this.speechModelEndpointId = speechModelEndpointId;
-        return this;
-    }
-
 }

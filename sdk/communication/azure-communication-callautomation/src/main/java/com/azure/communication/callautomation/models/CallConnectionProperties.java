@@ -16,6 +16,8 @@ import com.azure.core.annotation.Immutable;
 import java.util.List;
 import java.util.stream.Collectors;
 
+
+
 /**
  * Asynchronous client that supports call connection operations.
  */
@@ -29,10 +31,11 @@ public final class CallConnectionProperties {
     private final List<CommunicationIdentifier> targetParticipants;
     private final CallConnectionState callConnectionState;
     private final String callbackUrl;
-    private final String mediaSubscriptionId;
-    private final String dataSubscriptionId;
+    private final MediaStreamingSubscription mediaStreamingSubscription;
+    private final TranscriptionSubscription transcriptionSubscription;
     private final CommunicationUserIdentifier answeredBy;
     private final String correlationId;
+    private final PhoneNumberIdentifier answeredFor;
 
     static {
         CallConnectionPropertiesConstructorProxy.setAccessor(
@@ -57,10 +60,11 @@ public final class CallConnectionProperties {
         this.targetParticipants = null;
         this.callConnectionState = null;
         this.callbackUrl = null;
-        this.mediaSubscriptionId = null;
-        this.dataSubscriptionId = null;
+        this.mediaStreamingSubscription = null;
+        this.transcriptionSubscription = null;
         this.answeredBy = null;
         this.correlationId = null;
+        this.answeredFor = null;
     }
 
     /**
@@ -77,10 +81,11 @@ public final class CallConnectionProperties {
         this.targetParticipants = callConnectionPropertiesInternal.getTargets().stream().map(CommunicationIdentifierConverter::convert).collect(Collectors.toList());
         this.callConnectionState = CallConnectionState.fromString(callConnectionPropertiesInternal.getCallConnectionState().toString());
         this.callbackUrl = callConnectionPropertiesInternal.getCallbackUri();
-        this.mediaSubscriptionId = callConnectionPropertiesInternal.getMediaSubscriptionId();
-        this.dataSubscriptionId = callConnectionPropertiesInternal.getDataSubscriptionId();
+        this.mediaStreamingSubscription = null; //#TODO (mediaStreamingSubscription)  callConnectionPropertiesInternal.getMediaStreamingSubscription();
+        this.transcriptionSubscription = null; // #TODO (transcriptionSubscription) callConnectionPropertiesInternal.getTranscriptionSubscription();
         this.answeredBy = CommunicationUserIdentifierConverter.convert(callConnectionPropertiesInternal.getAnsweredBy());
         this.correlationId = callConnectionPropertiesInternal.getCorrelationId();
+        this.answeredFor = PhoneNumberIdentifierConverter.convert(callConnectionPropertiesInternal.getAnsweredFor());
     }
 
     /**
@@ -156,21 +161,21 @@ public final class CallConnectionProperties {
     }
 
     /**
-     * Get the mediaSubscriptionId property: SubscriptionId for media streaming.
+     * Get the MediaStreamingSubscription property: SubscriptionId for media streaming.
      *
-     * @return the mediaSubscriptionId value.
+     * @return the MediaStreamingSubscription value.
      */
-    public String getMediaSubscriptionId() {
-        return mediaSubscriptionId;
+    public MediaStreamingSubscription getMediaStreamingSubscription() {
+        return mediaStreamingSubscription;
     }
 
     /**
-     * Get the dataSubscriptionId property: SubscriptionId for transcription.
+     * Get the TranscriptionSubscription property: SubscriptionId for transcription.
      *
-     * @return the dataSubscriptionId value.
+     * @return the TranscriptionSubscription value.
      */
-    public String getDataSubscriptionId() {
-        return dataSubscriptionId;
+    public TranscriptionSubscription getTranscriptionSubscription() {
+        return transcriptionSubscription;
     }
 
     /**
@@ -187,5 +192,15 @@ public final class CallConnectionProperties {
      */
     public String getCorrelationId() {
         return correlationId;
+    }
+
+     /**
+     * Get the answeredFor property: Identity of the original Pstn target of an incoming Call. Only populated when the
+     * original target is a Pstn number.
+     * 
+     * @return the answeredFor value.
+     */
+    public PhoneNumberIdentifier getAnsweredFor() {
+        return answeredFor;
     }
 }
