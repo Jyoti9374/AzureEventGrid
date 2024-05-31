@@ -3,7 +3,7 @@
 
 package com.azure.health.insights.radiologyinsights;
 
-import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.time.OffsetDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
@@ -19,7 +19,6 @@ import com.azure.core.util.polling.AsyncPollResponse;
 import com.azure.core.util.polling.LongRunningOperationStatus;
 import com.azure.core.util.polling.PollerFlux;
 import com.azure.health.insights.radiologyinsights.models.ClinicalDocumentType;
-import com.azure.health.insights.radiologyinsights.models.CriticalResultInference;
 import com.azure.health.insights.radiologyinsights.models.DocumentAdministrativeMetadata;
 import com.azure.health.insights.radiologyinsights.models.DocumentAuthor;
 import com.azure.health.insights.radiologyinsights.models.DocumentContent;
@@ -30,6 +29,8 @@ import com.azure.health.insights.radiologyinsights.models.FhirR4CodeableConcept;
 import com.azure.health.insights.radiologyinsights.models.FhirR4Coding;
 import com.azure.health.insights.radiologyinsights.models.FindingOptions;
 import com.azure.health.insights.radiologyinsights.models.FollowupRecommendationOptions;
+import com.azure.health.insights.radiologyinsights.models.LateralityDiscrepancyInference;
+import com.azure.health.insights.radiologyinsights.models.LateralityDiscrepancyType;
 import com.azure.health.insights.radiologyinsights.models.OrderedProcedure;
 import com.azure.health.insights.radiologyinsights.models.PatientDetails;
 import com.azure.health.insights.radiologyinsights.models.PatientDocument;
@@ -50,32 +51,17 @@ import com.azure.health.insights.radiologyinsights.models.TimePeriod;
 /**
  * The SampleCriticalResultInferenceAsync class processes a sample radiology document
  * with the Radiology Insights service. It will initialize an asynchronous
- * RadiologyInsightsAsyncClient, build a Radiology Insights job request with the sample document, poll the
+ * RadiologyInsightsAsyncClient, build a Radiology Insights request with the sample document, poll the
  * results and display the Critical Results extracted by the Radiology Insights service.
  *
  */
-public class SampleCriticalResultInferenceAsync {
+public class SampleLateralityDiscrepancyInferenceAsync {
 
-    private static final String DOC_CONTENT = "CLINICAL HISTORY:   "
-            + "\r\n20-year-old female presenting with abdominal pain. Surgical history significant for appendectomy."
-            + "\r\n "
-            + "\r\nCOMPARISON:   "
-            + "\r\nRight upper quadrant sonographic performed 1 day prior."
-            + "\r\n "
-            + "\r\nTECHNIQUE:   "
-            + "\r\nTransabdominal grayscale pelvic sonography with duplex color Doppler "
-            + "\r\nand spectral waveform analysis of the ovaries."
-            + "\r\n "
-            + "\r\nFINDINGS:   "
-            + "\r\nThe uterus is unremarkable given the transabdominal technique with "
-            + "\r\nendometrial echo complex within physiologic normal limits. The "
-            + "\r\novaries are symmetric in size, measuring 2.5 x 1.2 x 3.0 cm and the "
-            + "\r\nleft measuring 2.8 x 1.5 x 1.9 cm.\n \r\nOn duplex imaging, Doppler signal is symmetric."
-            + "\r\n "
-            + "\r\nIMPRESSION:   "
-            + "\r\n1. Normal pelvic sonography. Findings of testicular torsion."
-            + "\r\n\nA new US pelvis within the next 6 months is recommended."
-            + "\n\nThese results have been discussed with Dr. Jones at 3 PM on November 5 2020.\n "
+    private static final String DOC_CONTENT = "Exam:   US LT BREAST TARGETED"
+            + "\r\nTechnique:  Targeted imaging of the  right breast  is performed."
+            + "\r\nFindings: Targeted imaging of the left breast is performed from the 6:00 to the 9:00 position.  "
+            + "\r\nAt the 6:00 position, 5 cm from the nipple, there is a 3 x 2 x 4 mm minimally hypoechoic mass with a peripheral calcification. "
+            + "This may correspond to the mammographic finding. No other cystic or solid masses visualized."
             + "\r\n";
 
     /**
@@ -85,7 +71,6 @@ public class SampleCriticalResultInferenceAsync {
      * @param args The command-line arguments passed to the program.
      */
     public static void main(final String[] args) throws InterruptedException {
-        // BEGIN: com.azure.health.insights.radiologyinsights.buildasyncclient
         String endpoint = Configuration.getGlobalConfiguration().get("AZURE_HEALTH_INSIGHTS_ENDPOINT");
         String apiKey = Configuration.getGlobalConfiguration().get("AZURE_HEALTH_INSIGHTS_API_KEY");
 
@@ -95,12 +80,9 @@ public class SampleCriticalResultInferenceAsync {
             clientBuilder = clientBuilder.credential(new AzureKeyCredential(apiKey));
         }
         RadiologyInsightsAsyncClient radiologyInsightsAsyncClient = clientBuilder.buildAsyncClient();
-        // END: com.azure.health.insights.radiologyinsights.buildasyncclient
 
-        // BEGIN: com.azure.health.insights.radiologyinsights.inferradiologyinsights
         PollerFlux<RadiologyInsightsJob, RadiologyInsightsInferenceResult> asyncPoller = radiologyInsightsAsyncClient
                 .beginInferRadiologyInsights(UUID.randomUUID().toString(), createRadiologyInsightsJob());
-        // END: com.azure.health.insights.radiologyinsights.inferradiologyinsights
 
         CountDownLatch latch = new CountDownLatch(1);
 
@@ -112,7 +94,7 @@ public class SampleCriticalResultInferenceAsync {
             .subscribe(completedResult -> {
                 if (completedResult.getStatus() == LongRunningOperationStatus.SUCCESSFULLY_COMPLETED) {
                     System.out.println("Completed poll response, status: " + completedResult.getStatus());
-                    displayCriticalResults(completedResult.getValue().getResult());
+                    displayLateralityDiscrepancies(completedResult.getValue().getResult());
                 }
             }, error -> {
                 System.err.println(error.getMessage());
@@ -123,26 +105,31 @@ public class SampleCriticalResultInferenceAsync {
     }
 
     /**
-     * Display the critical results of the Radiology Insights job request.
+     * Display the critical results of the Radiology Insights request.
      *
      * @param radiologyInsightsResult The response for the Radiology Insights
      *                                request.
      */
-    private static void displayCriticalResults(RadiologyInsightsInferenceResult radiologyInsightsResult) {
-        // BEGIN: com.azure.health.insights.radiologyinsights.displayresults
+    // BEGIN: com.azure.health.insights.radiologyinsights.displayresults.lateralitydiscrepancy
+    private static void displayLateralityDiscrepancies(RadiologyInsightsInferenceResult radiologyInsightsResult) {
         List<RadiologyInsightsPatientResult> patientResults = radiologyInsightsResult.getPatientResults();
         for (RadiologyInsightsPatientResult patientResult : patientResults) {
             List<RadiologyInsightsInference> inferences = patientResult.getInferences();
             for (RadiologyInsightsInference inference : inferences) {
-                if (inference instanceof CriticalResultInference) {
-                    CriticalResultInference criticalResultInference = (CriticalResultInference) inference;
-                    String description = criticalResultInference.getResult().getDescription();
-                    System.out.println("Critical Result Inference found: " + description);
+                if (inference instanceof LateralityDiscrepancyInference) {
+                    LateralityDiscrepancyInference lateralityDiscrepancyInference = (LateralityDiscrepancyInference) inference;
+                    FhirR4CodeableConcept lateralityIndication = lateralityDiscrepancyInference.getLateralityIndication();
+                    List<FhirR4Coding> codingList = lateralityIndication.getCoding();
+                    System.out.println("Laterality Discrepancy Inference found: ");
+                    LateralityDiscrepancyType discrepancyType = lateralityDiscrepancyInference.getDiscrepancyType();
+                    for (FhirR4Coding fhirR4Coding : codingList) {
+                        System.out.println("   Coding: " + fhirR4Coding.getCode() + ", " + fhirR4Coding.getDisplay() + " (" + fhirR4Coding.getSystem() + "), type: " + discrepancyType.toString());
+                    }
                 }
             }
         }
-        // END: com.azure.health.insights.radiologyinsights.displayresults
     }
+    // END: com.azure.health.insights.radiologyinsights.displayresults.lateralitydiscrepancy
 
     /**
      * Creates a RadiologyInsightsJob object to use in the Radiology Insights job
@@ -151,7 +138,6 @@ public class SampleCriticalResultInferenceAsync {
      * @return A RadiologyInsightsJob object with the created patient records and
      *         model configuration.
      */
-    // BEGIN: com.azure.health.insights.radiologyinsights.createrequest
     private static RadiologyInsightsJob createRadiologyInsightsJob() {
         List<PatientRecord> patientRecords = createPatientRecords();
         RadiologyInsightsData radiologyInsightsData = new RadiologyInsightsData(patientRecords);
@@ -174,18 +160,22 @@ public class SampleCriticalResultInferenceAsync {
 
         PatientDetails patientDetails = new PatientDetails();
         patientDetails.setSex(PatientSex.FEMALE);
+        // Define a formatter that matches the input pattern
+        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ssXXX");
 
-        // Use LocalDate to set Date
-        patientDetails.setBirthDate(LocalDate.of(1959, 11, 11));
+        // Parse the string to LocalDateTime
+        LocalDateTime dateTime = LocalDateTime.parse("1959-11-11T19:00:00+00:00", formatter);
+        patientDetails.setBirthDate(dateTime.toLocalDate());
 
         patientRecord.setDetails(patientDetails);
 
         PatientEncounter encounter = new PatientEncounter("encounterid1");
 
         TimePeriod period = new TimePeriod();
+        DateTimeFormatter formatter2 = DateTimeFormatter.ofPattern("yyyy-M-d'T'HH:mm:ssXXX");
 
-        OffsetDateTime startTime = OffsetDateTime.parse("2021-08-28T00:00:00Z");
-        OffsetDateTime endTime = OffsetDateTime.parse("2021-08-28T00:00:00Z");
+        OffsetDateTime startTime = OffsetDateTime.parse("2021-8-28T00:00:00" + "+00:00", formatter2);
+        OffsetDateTime endTime = OffsetDateTime.parse("2021-8-28T00:00:00" + "+00:00", formatter2);
 
         period.setStart(startTime);
         period.setEnd(endTime);
@@ -212,12 +202,12 @@ public class SampleCriticalResultInferenceAsync {
         FhirR4CodeableConcept procedureCode = new FhirR4CodeableConcept();
         FhirR4Coding procedureCoding = new FhirR4Coding();
         procedureCoding.setSystem("Http://hl7.org/fhir/ValueSet/cpt-all");
-        procedureCoding.setCode("USPELVIS");
-        procedureCoding.setDisplay("US PELVIS COMPLETE");
+        procedureCoding.setCode("26688-1");
+        procedureCoding.setDisplay("US BREAST - LEFT LIMITED");
 
         procedureCode.setCoding(Arrays.asList(procedureCoding));
         orderedProcedure.setCode(procedureCode);
-        orderedProcedure.setDescription("US PELVIS COMPLETE");
+        orderedProcedure.setDescription("US BREAST - LEFT LIMITED");
 
         adminMetadata.setOrderedProcedures(Arrays.asList(orderedProcedure));
         adminMetadata.setEncounterId("encounterid1");
@@ -225,9 +215,9 @@ public class SampleCriticalResultInferenceAsync {
         patientDocument.setAdministrativeMetadata(adminMetadata);
 
         // Define a formatter to handle milliseconds
-        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss.SSSXXX");
+        DateTimeFormatter formatter3 = DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss.SSSXXX");
 
-        OffsetDateTime createdDateTime = OffsetDateTime.parse("2021-06-01T00:00:00.000" + "+00:00", formatter);
+        OffsetDateTime createdDateTime = OffsetDateTime.parse("2021-06-01T00:00:00.000" + "+00:00", formatter3);
         patientDocument.setCreatedAt(createdDateTime);
 
         patientRecord.setPatientDocuments(Arrays.asList(patientDocument));
@@ -287,7 +277,6 @@ public class SampleCriticalResultInferenceAsync {
         inferenceOptions.setFindingOptions(findingOptions);
         return inferenceOptions;
     }
-    // END: com.azure.health.insights.radiologyinsights.createrequest
 
     private static Predicate<AsyncPollResponse<RadiologyInsightsJob, RadiologyInsightsInferenceResult>> isComplete = response -> {
         return response.getStatus() != LongRunningOperationStatus.IN_PROGRESS
