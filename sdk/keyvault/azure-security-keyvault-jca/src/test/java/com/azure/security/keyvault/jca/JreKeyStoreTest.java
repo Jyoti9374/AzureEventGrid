@@ -3,6 +3,7 @@
 
 package com.azure.security.keyvault.jca;
 
+import com.azure.security.keyvault.jca.implementation.KeyVaultClient;
 import com.azure.security.keyvault.jca.implementation.certificates.JreCertificates;
 import org.apache.http.HttpResponse;
 import org.apache.http.client.ResponseHandler;
@@ -23,6 +24,7 @@ import java.io.IOException;
 import java.security.KeyStore;
 import java.security.cert.Certificate;
 import java.util.Map;
+import java.util.logging.Logger;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
@@ -30,6 +32,8 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 @EnabledIfEnvironmentVariable(named = "AZURE_KEYVAULT_CERTIFICATE_NAME", matches = "myalias")
 public class JreKeyStoreTest {
+    private static final Logger LOGGER = Logger.getLogger(JreKeyStoreTest.class.getName());
+
     @BeforeAll
     public static void init() {
         /*
@@ -54,6 +58,7 @@ public class JreKeyStoreTest {
 
     @Test
     public void testJreKsTrustPeer() throws Exception {
+        LOGGER.entering("JreKeyStoreTest", "testJreKsTrustPeer");
 
         KeyStore ks = KeyStore.getInstance("AzureKeyVault");
         ks.load(null);
@@ -102,5 +107,7 @@ public class JreKeyStoreTest {
          * And verify all went well.
          */
         assertEquals("Success", result);
+
+        LOGGER.exiting("JreKeyStoreTest", "testJreKsTrustPeer");
     }
 }

@@ -34,6 +34,7 @@ import java.util.Optional;
 import java.util.logging.Logger;
 import java.util.stream.Stream;
 
+import static java.util.logging.Level.INFO;
 import static java.util.logging.Level.WARNING;
 
 /**
@@ -53,16 +54,24 @@ public final class HttpUtil {
 
     public static String get(String url, Map<String, String> headers) {
         String result = null;
+
         try (CloseableHttpClient client = buildClient()) {
             HttpGet httpGet = new HttpGet(url);
+
             if (headers != null) {
                 headers.forEach(httpGet::addHeader);
             }
+
             httpGet.addHeader(USER_AGENT_KEY, USER_AGENT_VALUE);
+
+            LOGGER.log(INFO, "Executing GET request: {0} with headers: {1}",
+                new Object[]{ httpGet.getRequestLine(), httpGet.getAllHeaders() });
+
             result = client.execute(httpGet, createResponseHandler());
         } catch (IOException ioe) {
             LOGGER.log(WARNING, "Unable to finish the HTTP GET request.", ioe);
         }
+
         return result;
     }
 
@@ -84,18 +93,27 @@ public final class HttpUtil {
 
     public static String post(String url, Map<String, String> headers, String body, String contentType) {
         String result = null;
+
         try (CloseableHttpClient client = buildClient()) {
             HttpPost httpPost = new HttpPost(url);
+
             httpPost.addHeader(USER_AGENT_KEY, USER_AGENT_VALUE);
+
             if (headers != null) {
                 headers.forEach(httpPost::addHeader);
                 httpPost.addHeader("Content-Type", contentType);
             }
+
             httpPost.setEntity(new StringEntity(body, ContentType.create(contentType)));
+
+            LOGGER.log(INFO, "Executing POST request: {0} with headers: {1} and body: {2}",
+                new Object[]{ httpPost.getRequestLine(), httpPost.getAllHeaders(), httpPost.getEntity() });
+
             result = client.execute(httpPost, createResponseHandler());
         } catch (IOException ioe) {
             LOGGER.log(WARNING, "Unable to finish the HTTP POST request.", ioe);
         }
+
         return result;
     }
 
@@ -111,6 +129,9 @@ public final class HttpUtil {
 
             httpGet.addHeader(USER_AGENT_KEY, USER_AGENT_VALUE);
 
+            LOGGER.log(INFO, "Executing GET request: {0} with headers: {1}",
+                new Object[]{ httpGet.getRequestLine(), httpGet.getAllHeaders() });
+
             result = client.execute(httpGet, createResponseHandlerForAuthChallenge());
         } catch (IOException ioe) {
             LOGGER.log(WARNING, "Unable to finish the HTTP GET request.", ioe);
@@ -121,18 +142,24 @@ public final class HttpUtil {
 
     private static ResponseHandler<String> createResponseHandler() {
         return (HttpResponse response) -> {
+            LOGGER.log(INFO, "Received response: {0}", response);
+
             int status = response.getStatusLine().getStatusCode();
             String result = null;
+
             if (status >= 200 && status < 300) {
                 HttpEntity entity = response.getEntity();
                 result = entity != null ? EntityUtils.toString(entity) : null;
             }
+
             return result;
         };
     }
 
     private static ResponseHandler<HttpResponse> createResponseHandlerForAuthChallenge() {
         return (HttpResponse response) -> {
+            LOGGER.log(INFO, "Received response: {0}", response);
+
             int status = response.getStatusLine().getStatusCode();
 
             return status == 401 ? response : null;
@@ -143,23 +170,24 @@ public final class HttpUtil {
         KeyStore keyStore = JreKeyStoreFactory.getDefaultKeyStore();
 
         SSLContext sslContext = null;
+
         try {
-            sslContext = SSLContexts
-                .custom()
+            sslContext = SSLContexts.custom()
                 .loadTrustMaterial(keyStore, null)
                 .build();
         } catch (NoSuchAlgorithmException | KeyManagementException | KeyStoreException e) {
-            LOGGER.log(WARNING, "Unable to build the ssl context.", e);
+            LOGGER.log(WARNING, "Unable to build the SSL context.", e);
         }
 
-        SSLConnectionSocketFactory sslConnectionSocketFactory = new SSLConnectionSocketFactory(
-            sslContext, (HostnameVerifier) null);
+        SSLConnectionSocketFactory sslConnectionSocketFactory =
+            new SSLConnectionSocketFactory(sslContext, (HostnameVerifier) null);
 
-        PoolingHttpClientConnectionManager manager = new PoolingHttpClientConnectionManager(
-            RegistryBuilder.<ConnectionSocketFactory>create()
+        PoolingHttpClientConnectionManager manager =
+            new PoolingHttpClientConnectionManager(RegistryBuilder.<ConnectionSocketFactory>create()
                 .register("http", PlainConnectionSocketFactory.getSocketFactory())
                 .register("https", sslConnectionSocketFactory)
                 .build());
+
         return HttpClients.custom().setConnectionManager(manager).build();
     }
 }

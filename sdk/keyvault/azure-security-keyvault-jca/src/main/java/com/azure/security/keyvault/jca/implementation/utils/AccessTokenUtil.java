@@ -157,6 +157,7 @@ public final class AccessTokenUtil {
 
         if (clientId != null) {
             url.append("&clientid=").append(clientId);
+
             LOGGER.log(INFO, "Using managed identity with client ID: {0}", clientId);
         }
 
