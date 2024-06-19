@@ -32,6 +32,7 @@ import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashSet;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.Locale;
 import java.util.Objects;
@@ -144,6 +145,7 @@ public class CosmosClientBuilder implements
     private CosmosEndToEndOperationLatencyPolicyConfig cosmosEndToEndOperationLatencyPolicyConfig;
     private SessionRetryOptions sessionRetryOptions;
     private Supplier<CosmosExcludedRegions> cosmosExcludedRegionsSupplier;
+    private final List<CosmosOperationPolicy> requestPolicies;
     private CosmosItemSerializer defaultCustomSerializer;
     private boolean isRegionScopedSessionCapturingEnabled = false;
 
@@ -158,6 +160,7 @@ public class CosmosClientBuilder implements
         this.throttlingRetryOptions = new ThrottlingRetryOptions();
         this.clientTelemetryConfig = new CosmosClientTelemetryConfig();
         this.resetNonIdempotentWriteRetryPolicy();
+        this.requestPolicies = new LinkedList<>();
     }
 
     CosmosClientBuilder metadataCaches(CosmosClientMetadataCachesSnapshot metadataCachesSnapshot) {
@@ -229,6 +232,21 @@ public class CosmosClientBuilder implements
     CosmosClientBuilder setApiType(ApiType apiType){
         this.apiType = apiType;
         return this;
+    }
+
+    /**
+     * Adds a policy for modifying request options dynamically.
+     *
+     * @param policy the policy to add
+     * @return current cosmosClientBuilder
+     */
+    public CosmosClientBuilder addPolicy(CosmosOperationPolicy policy) {
+        this.requestPolicies.add(policy);
+        return this;
+    }
+
+    List<CosmosOperationPolicy> getPolicies() {
+        return requestPolicies;
     }
 
     /**

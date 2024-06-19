@@ -8,6 +8,7 @@ import com.azure.cosmos.ConsistencyLevel;
 import com.azure.cosmos.CosmosContainerProactiveInitConfig;
 import com.azure.cosmos.CosmosEndToEndOperationLatencyPolicyConfig;
 import com.azure.cosmos.CosmosItemSerializer;
+import com.azure.cosmos.CosmosOperationPolicy;
 import com.azure.cosmos.SessionRetryOptions;
 import com.azure.cosmos.implementation.apachecommons.lang.StringUtils;
 import com.azure.cosmos.implementation.batch.ServerBatchRequest;
@@ -107,6 +108,7 @@ public interface AsyncDocumentClient {
         private CosmosContainerProactiveInitConfig containerProactiveInitConfig;
         private CosmosItemSerializer defaultCustomSerializer;
         private boolean isRegionScopedSessionCapturingEnabled;
+        private List<CosmosOperationPolicy> operationPolicies;
 
         public Builder withServiceEndpoint(String serviceEndpoint) {
             try {
@@ -306,7 +308,9 @@ public interface AsyncDocumentClient {
                     sessionRetryOptions,
                     containerProactiveInitConfig,
                     defaultCustomSerializer,
-                    isRegionScopedSessionCapturingEnabled);
+                    isRegionScopedSessionCapturingEnabled,
+                    operationPolicies
+            );
 
             client.init(state, null);
             return client;
@@ -342,6 +346,11 @@ public interface AsyncDocumentClient {
 
         public AzureKeyCredential getCredential() {
             return credential;
+        }
+
+        public Builder withRequestPolicies(List<CosmosOperationPolicy> operationPolicies) {
+            this.operationPolicies = operationPolicies;
+            return this;
         }
     }
 
@@ -733,9 +742,9 @@ public interface AsyncDocumentClient {
      * The {@link Flux} will contain one or several feed response pages of the obtained documents.
      * In case of failure the {@link Flux} will error.
      *
-     * @param collection    the parent document collection.
+     * @param <T>            the type parameter
+     * @param collection     the parent document collection.
      * @param requestOptions the change feed request options.
-     * @param <T> the type parameter
      * @return a {@link Flux} containing one or several feed response pages of the obtained documents or an error.
      */
     <T> Flux<FeedResponse<T>> queryDocumentChangeFeed(
