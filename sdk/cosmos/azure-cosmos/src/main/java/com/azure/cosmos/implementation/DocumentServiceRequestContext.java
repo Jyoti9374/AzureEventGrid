@@ -19,6 +19,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.function.Supplier;
 
 public class DocumentServiceRequestContext implements Cloneable {
     public volatile boolean forceAddressRefresh;
@@ -51,9 +52,16 @@ public class DocumentServiceRequestContext implements Cloneable {
     private volatile List<String> excludeRegions;
     private volatile long approximateBloomFilterInsertionCount;
     private final Set<String> sessionTokenEvaluationResults = ConcurrentHashMap.newKeySet();
+    private volatile List<String> unavailableRegionsForPartition;
 
     // For cancelled rntbd requests, track the response as OperationCancelledException which later will be used to populate the cosmosDiagnostics
     public final Map<String, CosmosException> rntbdCancelledRequestMap = new ConcurrentHashMap<>();
+
+    private PointOperationContextForCircuitBreaker pointOperationContextForCircuitBreaker;
+
+    private FeedOperationContextForCircuitBreaker feedOperationContextForCircuitBreaker;
+    private volatile Supplier<DocumentClientRetryPolicy> clientRetryPolicySupplier;
+    private volatile Utils.ValueHolder<Map<String, String>> regionToHealthStatusesForPartitionKeyRange = new Utils.ValueHolder<>();
 
     public DocumentServiceRequestContext() {}
 
@@ -136,6 +144,8 @@ public class DocumentServiceRequestContext implements Cloneable {
         context.throughputControlCycleId = this.throughputControlCycleId;
         context.replicaAddressValidationEnabled = this.replicaAddressValidationEnabled;
         context.endToEndOperationLatencyPolicyConfig = this.endToEndOperationLatencyPolicyConfig;
+        context.unavailableRegionsForPartition = this.unavailableRegionsForPartition;
+        context.feedOperationContextForCircuitBreaker = this.feedOperationContextForCircuitBreaker;
         return context;
     }
 
@@ -163,6 +173,30 @@ public class DocumentServiceRequestContext implements Cloneable {
         this.excludeRegions = excludeRegions;
     }
 
+    public List<String> getUnavailableRegionsForPartition() {
+        return unavailableRegionsForPartition;
+    }
+
+    public void setUnavailableRegionsForPartition(List<String> unavailableRegionsForPartition) {
+        this.unavailableRegionsForPartition = unavailableRegionsForPartition;
+    }
+
+    public PointOperationContextForCircuitBreaker getPointOperationContextForCircuitBreaker() {
+        return pointOperationContextForCircuitBreaker;
+    }
+
+    public void setPointOperationContext(PointOperationContextForCircuitBreaker pointOperationContextForCircuitBreaker) {
+        this.pointOperationContextForCircuitBreaker = pointOperationContextForCircuitBreaker;
+    }
+
+    public FeedOperationContextForCircuitBreaker getFeedOperationContextForCircuitBreaker() {
+        return feedOperationContextForCircuitBreaker;
+    }
+
+    public void setFeedOperationContext(FeedOperationContextForCircuitBreaker feedOperationContextForCircuitBreaker) {
+        this.feedOperationContextForCircuitBreaker = feedOperationContextForCircuitBreaker;
+    }
+
     public long getApproximateBloomFilterInsertionCount() {
         return approximateBloomFilterInsertionCount;
     }
@@ -173,6 +207,22 @@ public class DocumentServiceRequestContext implements Cloneable {
 
     public Set<String> getSessionTokenEvaluationResults() {
         return sessionTokenEvaluationResults;
+    }
+
+    public Supplier<DocumentClientRetryPolicy> getClientRetryPolicySupplier() {
+        return clientRetryPolicySupplier;
+    }
+
+    public void setClientRetryPolicySupplier(Supplier<DocumentClientRetryPolicy> clientRetryPolicySupplier) {
+        this.clientRetryPolicySupplier = clientRetryPolicySupplier;
+    }
+
+    public Utils.ValueHolder<Map<String, String>> getRegionToHealthStatusesForPartitionKeyRange() {
+        return regionToHealthStatusesForPartitionKeyRange;
+    }
+
+    public void setRegionToHealthStatusesForPartitionKeyRange(Map<String, String> regionToHealthStatusesForPartitionKeyRange) {
+        this.regionToHealthStatusesForPartitionKeyRange.v = regionToHealthStatusesForPartitionKeyRange;
     }
 }
 

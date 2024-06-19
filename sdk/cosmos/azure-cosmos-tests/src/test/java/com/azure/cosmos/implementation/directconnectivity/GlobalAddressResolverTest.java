@@ -7,11 +7,11 @@ package com.azure.cosmos.implementation.directconnectivity;
 import com.azure.cosmos.DirectConnectionConfig;
 import com.azure.cosmos.CosmosContainerProactiveInitConfig;
 import com.azure.cosmos.CosmosContainerProactiveInitConfigBuilder;
-import com.azure.cosmos.implementation.AsyncDocumentClient;
 import com.azure.cosmos.implementation.Configs;
 import com.azure.cosmos.implementation.ConnectionPolicy;
 import com.azure.cosmos.implementation.DocumentCollection;
 import com.azure.cosmos.implementation.GlobalEndpointManager;
+import com.azure.cosmos.implementation.circuitBreaker.GlobalPartitionEndpointManagerForCircuitBreaker;
 import com.azure.cosmos.implementation.IAuthorizationTokenProvider;
 import com.azure.cosmos.implementation.OpenConnectionResponse;
 import com.azure.cosmos.implementation.OperationType;
@@ -28,7 +28,6 @@ import com.azure.cosmos.implementation.http.HttpClient;
 import com.azure.cosmos.implementation.routing.PartitionKeyInternalHelper;
 import com.azure.cosmos.implementation.routing.PartitionKeyRangeIdentity;
 import com.azure.cosmos.models.CosmosContainerIdentity;
-import com.azure.cosmos.models.ModelBridgeInternal;
 import org.mockito.ArgumentMatchers;
 import org.mockito.Mockito;
 import org.testng.annotations.BeforeClass;
@@ -51,6 +50,7 @@ public class GlobalAddressResolverTest {
 
     private HttpClient httpClient;
     private GlobalEndpointManager endpointManager;
+    private GlobalPartitionEndpointManagerForCircuitBreaker globalPartitionEndpointManager;
     private IAuthorizationTokenProvider authorizationTokenProvider;
     private UserAgentContainer userAgentContainer;
     private RxCollectionCache collectionCache;
@@ -111,7 +111,7 @@ public class GlobalAddressResolverTest {
 
         GlobalAddressResolver globalAddressResolver = new GlobalAddressResolver(mockDiagnosticsClientContext(), httpClient, endpointManager, Protocol.HTTPS, authorizationTokenProvider, collectionCache, routingMapProvider,
                 userAgentContainer,
-                serviceConfigReader, connectionPolicy, null);
+                serviceConfigReader, connectionPolicy, null, globalPartitionEndpointManager);
         RxDocumentServiceRequest request;
         request = RxDocumentServiceRequest.createFromName(mockDiagnosticsClientContext(),
                 OperationType.Read,
@@ -146,7 +146,8 @@ public class GlobalAddressResolverTest {
                         userAgentContainer,
                         serviceConfigReader,
                         connectionPolicy,
-                        null);
+                        null,
+                        globalPartitionEndpointManager);
         GlobalAddressResolver.EndpointCache endpointCache = new GlobalAddressResolver.EndpointCache();
         GatewayAddressCache gatewayAddressCache = Mockito.mock(GatewayAddressCache.class);
         endpointCache.addressCache = gatewayAddressCache;

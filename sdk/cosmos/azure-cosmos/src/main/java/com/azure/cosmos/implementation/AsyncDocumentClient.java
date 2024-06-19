@@ -13,6 +13,7 @@ import com.azure.cosmos.implementation.apachecommons.lang.StringUtils;
 import com.azure.cosmos.implementation.batch.ServerBatchRequest;
 import com.azure.cosmos.implementation.caches.RxClientCollectionCache;
 import com.azure.cosmos.implementation.caches.RxPartitionKeyRangeCache;
+import com.azure.cosmos.implementation.circuitBreaker.GlobalPartitionEndpointManagerForCircuitBreaker;
 import com.azure.cosmos.implementation.clienttelemetry.ClientTelemetry;
 import com.azure.cosmos.implementation.directconnectivity.AddressSelector;
 import com.azure.cosmos.implementation.faultinjection.IFaultInjectorProvider;
@@ -609,7 +610,7 @@ public interface AsyncDocumentClient {
      * @param options      the request options.
      * @return a {@link Mono} containing the single resource response with the replaced document or an error.
      */
-    Mono<ResourceResponse<Document>> replaceDocument(String documentLink, Object document, RequestOptions options);
+    Mono<ResourceResponse<Document>> replaceDocument(String documentLink, Object document, RequestOptions options, String collectionLink);
 
     /**
      * Apply patch on an item.
@@ -624,7 +625,7 @@ public interface AsyncDocumentClient {
      *
      * @return a {@link Mono} containing the single resource response with the patched document or an error.
      */
-    Mono<ResourceResponse<Document>> patchDocument(String documentLink, CosmosPatchOperations cosmosPatchOperations, RequestOptions options);
+    Mono<ResourceResponse<Document>> patchDocument(String documentLink, CosmosPatchOperations cosmosPatchOperations, RequestOptions options, String collectionLink);
 
     /**
      * Replaces a document with the passed in document.
@@ -637,7 +638,7 @@ public interface AsyncDocumentClient {
      * @param options  the request options.
      * @return a {@link Mono} containing the single resource response with the replaced document or an error.
      */
-    Mono<ResourceResponse<Document>> replaceDocument(Document document, RequestOptions options);
+    Mono<ResourceResponse<Document>> replaceDocument(Document document, RequestOptions options, String collectionLink);
 
     /**
      * Deletes a document
@@ -650,7 +651,7 @@ public interface AsyncDocumentClient {
      * @param options      the request options.
      * @return a {@link Mono} containing the single resource response for the deleted document or an error.
      */
-    Mono<ResourceResponse<Document>> deleteDocument(String documentLink, RequestOptions options);
+    Mono<ResourceResponse<Document>> deleteDocument(String documentLink, RequestOptions options, String collectionLink);
 
     /**
      * Deletes a document
@@ -663,7 +664,7 @@ public interface AsyncDocumentClient {
      * @param options  the request options.
      * @return a {@link Mono} containing the single resource response for the deleted document or an error.
      */
-    Mono<ResourceResponse<Document>> deleteDocument(String documentLink, InternalObjectNode internalObjectNode, RequestOptions options);
+    Mono<ResourceResponse<Document>> deleteDocument(String documentLink, InternalObjectNode internalObjectNode, RequestOptions options, String collectionLink);
 
     Mono<ResourceResponse<Document>> deleteAllDocumentsByPartitionKey(String collectionLink, PartitionKey partitionKey, RequestOptions options);
     /**
@@ -677,7 +678,7 @@ public interface AsyncDocumentClient {
      * @param options      the request options.
      * @return a {@link Mono} containing the single resource response with the read document or an error.
      */
-    Mono<ResourceResponse<Document>> readDocument(String documentLink, RequestOptions options);
+    Mono<ResourceResponse<Document>> readDocument(String documentLink, RequestOptions options, String collectionLink);
 
     /**
      * Reads all documents in a document collection.
@@ -1580,6 +1581,8 @@ public interface AsyncDocumentClient {
      * @return the global endpoint manager.
      */
     GlobalEndpointManager getGlobalEndpointManager();
+
+    GlobalPartitionEndpointManagerForCircuitBreaker getGlobalPartitionEndpointManagerForCircuitBreaker();
 
     /***
      * Get the address selector.

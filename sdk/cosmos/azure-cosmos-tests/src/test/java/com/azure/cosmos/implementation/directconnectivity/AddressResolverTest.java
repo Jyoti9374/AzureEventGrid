@@ -6,10 +6,10 @@ package com.azure.cosmos.implementation.directconnectivity;
 
 import com.azure.cosmos.BridgeInternal;
 import com.azure.cosmos.implementation.DocumentCollection;
+import com.azure.cosmos.implementation.circuitBreaker.GlobalPartitionEndpointManagerForCircuitBreaker;
 import com.azure.cosmos.implementation.HttpConstants;
 import com.azure.cosmos.implementation.ICollectionRoutingMapCache;
 import com.azure.cosmos.implementation.InvalidPartitionException;
-import com.azure.cosmos.implementation.MetadataDiagnosticsContext;
 import com.azure.cosmos.implementation.NotFoundException;
 import com.azure.cosmos.implementation.OperationType;
 import com.azure.cosmos.implementation.PartitionKeyRange;
@@ -26,7 +26,6 @@ import com.azure.cosmos.implementation.routing.IServerIdentity;
 import com.azure.cosmos.implementation.routing.InMemoryCollectionRoutingMap;
 import com.azure.cosmos.implementation.routing.PartitionKeyInternalHelper;
 import com.azure.cosmos.implementation.routing.PartitionKeyRangeIdentity;
-import com.azure.cosmos.models.ModelBridgeInternal;
 import com.azure.cosmos.models.PartitionKey;
 import com.azure.cosmos.models.PartitionKeyDefinition;
 import org.apache.commons.lang3.NotImplementedException;
@@ -65,14 +64,15 @@ public class AddressResolverTest {
     private RxCollectionCache collectionCache;
     private ICollectionRoutingMapCache collectionRoutingMapCache;
     private IAddressCache fabricAddressCache;
-
+    private GlobalPartitionEndpointManagerForCircuitBreaker globalPartitionEndpointManager;
     private int collectionCacheRefreshedCount;
     private Map<String, Integer> routingMapRefreshCount;
     private Map<ServiceIdentity, Integer> addressesRefreshCount;
 
     @BeforeClass(groups = "unit")
     public void before_AddressResolverTest() throws Exception {
-        this.addressResolver = new AddressResolver();
+        this.globalPartitionEndpointManager = Mockito.mock(GlobalPartitionEndpointManagerForCircuitBreaker.class);
+        this.addressResolver = new AddressResolver(this.globalPartitionEndpointManager);
         this.collectionCache = Mockito.mock(RxCollectionCache.class);
         this.collectionRoutingMapCache = Mockito.mock(ICollectionRoutingMapCache.class);
         this.fabricAddressCache = Mockito.mock(IAddressCache.class);

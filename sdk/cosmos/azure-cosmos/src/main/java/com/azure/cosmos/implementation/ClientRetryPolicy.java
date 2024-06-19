@@ -9,6 +9,7 @@ import com.azure.cosmos.ThrottlingRetryOptions;
 import com.azure.cosmos.implementation.apachecommons.collections.list.UnmodifiableList;
 import com.azure.cosmos.implementation.apachecommons.lang.StringUtils;
 import com.azure.cosmos.implementation.caches.RxCollectionCache;
+import com.azure.cosmos.implementation.circuitBreaker.GlobalPartitionEndpointManagerForCircuitBreaker;
 import com.azure.cosmos.implementation.directconnectivity.WebExceptionUtility;
 import com.azure.cosmos.implementation.faultinjection.FaultInjectionRequestContext;
 import org.slf4j.Logger;
@@ -52,12 +53,14 @@ public class ClientRetryPolicy extends DocumentClientRetryPolicy {
     private RxDocumentServiceRequest request;
     private RxCollectionCache rxCollectionCache;
     private final FaultInjectionRequestContext faultInjectionRequestContext;
+    private final GlobalPartitionEndpointManagerForCircuitBreaker globalPartitionEndpointManagerForCircuitBreaker;
 
     public ClientRetryPolicy(DiagnosticsClientContext diagnosticsClientContext,
                              GlobalEndpointManager globalEndpointManager,
                              boolean enableEndpointDiscovery,
                              ThrottlingRetryOptions throttlingRetryOptions,
-                             RxCollectionCache rxCollectionCache) {
+                             RxCollectionCache rxCollectionCache,
+                             GlobalPartitionEndpointManagerForCircuitBreaker globalPartitionEndpointManagerForCircuitBreaker) {
 
         this.globalEndpointManager = globalEndpointManager;
         this.failoverRetryCount = 0;
@@ -73,6 +76,7 @@ public class ClientRetryPolicy extends DocumentClientRetryPolicy {
             false);
         this.rxCollectionCache = rxCollectionCache;
         this.faultInjectionRequestContext = new FaultInjectionRequestContext();
+        this.globalPartitionEndpointManagerForCircuitBreaker = globalPartitionEndpointManagerForCircuitBreaker;
     }
 
     @Override
@@ -159,6 +163,28 @@ public class ClientRetryPolicy extends DocumentClientRetryPolicy {
                 isWebExceptionRetriable,
                 this.request.getNonIdempotentWriteRetriesEnabled(),
                 clientException);
+        }
+
+        if (clientException != null && Exceptions.isStatusCode(clientException, HttpConstants.StatusCodes.REQUEST_TIMEOUT)) {
+            logger.info(
+                "Request timeout - IsReadRequest {}, IsWebExceptionRetriable {}, NonIdempotentWriteRetriesEnabled {}",
+                this.isReadRequest,
+                false,
+                this.request.getNonIdempotentWriteRetriesEnabled(),
+                e);
+
+            return this.shouldRetryOnRequestTimeout(
+                this.isReadRequest,
+                this.request.getNonIdempotentWriteRetriesEnabled()
+            );
+        }
+
+        if (clientException != null &&
+            Exceptions.isStatusCode(clientException, HttpConstants.StatusCodes.INTERNAL_SERVER_ERROR) &&
+            Exceptions.isSubStatusCode(clientException, HttpConstants.SubStatusCodes.UNKNOWN)) {
+
+            logger.info("Internal server error - IsReadRequest {}", this.isReadRequest, e);
+            return this.shouldRetryOnInternalServerError();
         }
 
         return this.throttlingRetry.shouldRetry(e);
@@ -317,6 +343,11 @@ public class ClientRetryPolicy extends DocumentClientRetryPolicy {
         boolean nonIdempotentWriteRetriesEnabled,
         CosmosException cosmosException) {
 
+        if (this.globalPartitionEndpointManagerForCircuitBreaker.isPartitionLevelCircuitBreakingApplicable(this.request)) {
+            this.globalPartitionEndpointManagerForCircuitBreaker
+                .handleLocationExceptionForPartitionKeyRange(this.request, this.request.requestContext.locationEndpointToRoute);
+        }
+
         // The request has failed with 503, SDK need to decide whether it is safe to retry for write operations
         // For server generated retries, it is safe to retry
         // For SDK generated 503, it will be more tricky as we have to decide the cause of it. For any causes that SDK not sure whether the request
@@ -365,6 +396,32 @@ public class ClientRetryPolicy extends DocumentClientRetryPolicy {
         // RetryCount is used as zero-based index
         this.retryContext = new RetryContext(this.serviceUnavailableRetryCount, true);
         return Mono.just(ShouldRetryResult.retryAfter(Duration.ZERO));
+    }
+
+    private Mono<ShouldRetryResult> shouldRetryOnRequestTimeout(
+        boolean isReadRequest,
+        boolean nonIdempotentWriteRetriesEnabled) {
+
+        if (this.globalPartitionEndpointManagerForCircuitBreaker.isPartitionLevelCircuitBreakingApplicable(this.request)) {
+            if (!isReadRequest && !nonIdempotentWriteRetriesEnabled) {
+                this.globalPartitionEndpointManagerForCircuitBreaker.handleLocationExceptionForPartitionKeyRange(
+                    request,
+                    request.requestContext.locationEndpointToRoute);
+            }
+        }
+
+        return Mono.just(ShouldRetryResult.NO_RETRY);
+    }
+
+    private Mono<ShouldRetryResult> shouldRetryOnInternalServerError() {
+
+        if (this.globalPartitionEndpointManagerForCircuitBreaker.isPartitionLevelCircuitBreakingApplicable(this.request)) {
+            this.globalPartitionEndpointManagerForCircuitBreaker.handleLocationExceptionForPartitionKeyRange(
+                request,
+                request.requestContext.locationEndpointToRoute);
+        }
+
+        return Mono.just(ShouldRetryResult.NO_RETRY);
     }
 
     @Override

@@ -9,6 +9,7 @@ import com.azure.cosmos.CosmosException;
 import com.azure.cosmos.implementation.BadRequestException;
 import com.azure.cosmos.implementation.DocumentCollection;
 import com.azure.cosmos.implementation.Exceptions;
+import com.azure.cosmos.implementation.circuitBreaker.GlobalPartitionEndpointManagerForCircuitBreaker;
 import com.azure.cosmos.implementation.HttpConstants;
 import com.azure.cosmos.implementation.ICollectionRoutingMapCache;
 import com.azure.cosmos.implementation.InternalServerErrorException;
@@ -54,8 +55,10 @@ public class AddressResolver implements IAddressResolver {
     private RxCollectionCache collectionCache;
     private ICollectionRoutingMapCache collectionRoutingMapCache;
     private IAddressCache addressCache;
+    private GlobalPartitionEndpointManagerForCircuitBreaker globalPartitionEndpointManagerForCircuitBreaker;
 
-    public AddressResolver() {
+    public AddressResolver(GlobalPartitionEndpointManagerForCircuitBreaker globalPartitionEndpointManagerForCircuitBreaker) {
+        this.globalPartitionEndpointManagerForCircuitBreaker = globalPartitionEndpointManagerForCircuitBreaker;
     }
 
     public void initializeCaches(
@@ -82,7 +85,6 @@ public class AddressResolver implements IAddressResolver {
             }
 
             request.requestContext.resolvedPartitionKeyRange = result.TargetPartitionKeyRange;
-
             return Mono.just(result.Addresses);
         });
     }
@@ -95,6 +97,11 @@ public class AddressResolver implements IAddressResolver {
     @Override
     public void setOpenConnectionsProcessor(ProactiveOpenConnectionsProcessor proactiveOpenConnectionsProcessor) {
         throw new NotImplementedException("setOpenConnectionsProcessor is not supported on AddressResolver");
+    }
+
+    @Override
+    public GlobalPartitionEndpointManagerForCircuitBreaker getGlobalPartitionEndpointManagerForCircuitBreaker() {
+        return this.globalPartitionEndpointManagerForCircuitBreaker;
     }
 
     private static boolean isSameCollection(PartitionKeyRange initiallyResolved, PartitionKeyRange newlyResolved) {

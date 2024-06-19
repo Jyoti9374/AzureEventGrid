@@ -4,6 +4,7 @@
 package com.azure.cosmos.implementation;
 
 import com.azure.cosmos.implementation.apachecommons.collections.list.UnmodifiableList;
+import com.azure.cosmos.implementation.circuitBreaker.GlobalPartitionEndpointManagerForCircuitBreaker;
 import com.azure.cosmos.implementation.routing.LocationCache;
 import com.azure.cosmos.implementation.routing.LocationHelper;
 import org.slf4j.Logger;
@@ -17,10 +18,8 @@ import java.net.URI;
 import java.time.Duration;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Function;
 
 /**
@@ -47,6 +46,8 @@ public class GlobalEndpointManager implements AutoCloseable {
 
     private volatile Throwable latestDatabaseRefreshError;
 
+    private GlobalPartitionEndpointManagerForCircuitBreaker globalPartitionEndpointManagerForCircuitBreaker;
+
     public void setLatestDatabaseRefreshError(Throwable latestDatabaseRefreshError) {
         this.latestDatabaseRefreshError = latestDatabaseRefreshError;
     }
@@ -57,6 +58,7 @@ public class GlobalEndpointManager implements AutoCloseable {
     public GlobalEndpointManager(DatabaseAccountManagerInternal owner, ConnectionPolicy connectionPolicy, Configs configs)  {
         this.backgroundRefreshLocationTimeIntervalInMS = configs.getUnavailableLocationsExpirationTimeInSeconds() * 1000;
         this.maxInitializationTime = Duration.ofSeconds(configs.getGlobalEndpointManagerMaxInitializationTimeInSeconds());
+
         try {
             this.locationCache = new LocationCache(
                     connectionPolicy,
@@ -103,12 +105,12 @@ public class GlobalEndpointManager implements AutoCloseable {
 
     public UnmodifiableList<URI> getApplicableReadEndpoints(List<String> excludedRegions) {
         // readonly
-        return this.locationCache.getApplicableReadEndpoints(excludedRegions);
+        return this.locationCache.getApplicableReadEndpoints(excludedRegions, new ArrayList<>());
     }
 
     public UnmodifiableList<URI> getApplicableWriteEndpoints(List<String> excludedRegions) {
         //readonly
-        return this.locationCache.getApplicableWriteEndpoints(excludedRegions);
+        return this.locationCache.getApplicableWriteEndpoints(excludedRegions, new ArrayList<>());
     }
 
     public List<URI> getAvailableReadEndpoints() {
@@ -334,6 +336,14 @@ public class GlobalEndpointManager implements AutoCloseable {
 
     public String getRegionName(URI locationEndpoint, OperationType operationType) {
         return this.locationCache.getRegionName(locationEndpoint, operationType);
+    }
+
+    public GlobalPartitionEndpointManagerForCircuitBreaker getGlobalPartitionEndpointManagerForCircuitBreaker() {
+        return globalPartitionEndpointManagerForCircuitBreaker;
+    }
+
+    public void setGlobalPartitionEndpointManagerForCircuitBreaker(GlobalPartitionEndpointManagerForCircuitBreaker globalPartitionEndpointManagerForCircuitBreaker) {
+        this.globalPartitionEndpointManagerForCircuitBreaker = globalPartitionEndpointManagerForCircuitBreaker;
     }
 
     public ConnectionPolicy getConnectionPolicy() {
