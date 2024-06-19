@@ -61,7 +61,7 @@ public final class HttpUtil {
             httpGet.addHeader(USER_AGENT_KEY, USER_AGENT_VALUE);
             result = client.execute(httpGet, createResponseHandler());
         } catch (IOException ioe) {
-            LOGGER.log(WARNING, "Unable to finish the http get request.", ioe);
+            LOGGER.log(WARNING, "Unable to finish the HTTP GET request.", ioe);
         }
         return result;
     }
@@ -94,11 +94,30 @@ public final class HttpUtil {
             httpPost.setEntity(new StringEntity(body, ContentType.create(contentType)));
             result = client.execute(httpPost, createResponseHandler());
         } catch (IOException ioe) {
-            LOGGER.log(WARNING, "Unable to finish the http post request.", ioe);
+            LOGGER.log(WARNING, "Unable to finish the HTTP POST request.", ioe);
         }
         return result;
     }
 
+    public static HttpResponse getWithResponse(String url, Map<String, String> headers) {
+        HttpResponse result = null;
+
+        try (CloseableHttpClient client = buildClient()) {
+            HttpGet httpGet = new HttpGet(url);
+
+            if (headers != null) {
+                headers.forEach(httpGet::addHeader);
+            }
+
+            httpGet.addHeader(USER_AGENT_KEY, USER_AGENT_VALUE);
+
+            result = client.execute(httpGet, createResponseHandlerForAuthChallenge());
+        } catch (IOException ioe) {
+            LOGGER.log(WARNING, "Unable to finish the HTTP GET request.", ioe);
+        }
+
+        return result;
+    }
 
     private static ResponseHandler<String> createResponseHandler() {
         return (HttpResponse response) -> {
@@ -109,6 +128,14 @@ public final class HttpUtil {
                 result = entity != null ? EntityUtils.toString(entity) : null;
             }
             return result;
+        };
+    }
+
+    private static ResponseHandler<HttpResponse> createResponseHandlerForAuthChallenge() {
+        return (HttpResponse response) -> {
+            int status = response.getStatusLine().getStatusCode();
+
+            return status == 401 ? response : null;
         };
     }
 
